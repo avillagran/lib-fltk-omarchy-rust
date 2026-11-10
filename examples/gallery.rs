@@ -3,6 +3,7 @@
 //!   cargo run --example gallery
 //!   cargo run --example gallery -- --snapshot build/shots/gallery.png
 //!   cargo run --example gallery -- --locale ar --snapshot build/shots/gallery-ar.png
+use fltk_omarchy::a11y::AccessibleExt;
 use fltk_omarchy::edit::{CompletionItem, Composer, Trigger};
 use fltk_omarchy::layout::{self, FlexExt};
 use fltk_omarchy::popups::{PopupItem, PopupMenu};
@@ -76,7 +77,7 @@ fn main() {
     let mut r = layout::row();
     let field = TextField::new().bind_placeholder(&i18n::text("Search…")).bind(&name);
     let count = State::new(42i64);
-    r.fit(&*NumberField::new(&count, 0, 100, 1));
+    r.fit(&*NumberField::new(&count, 0, 100, 1).accessible_name("Items"));
     // Plural forms of the current language (Up/Down in the number field).
     r.fit(&*Label::new("").tone(Tone::Dim).bind(&i18n::map(&count, |n| trn!("{count} items", *n))));
     let _ = field;
@@ -140,7 +141,7 @@ fn main() {
 fn body_slider(sec: &mut fltk::group::Flex, v: &State<f64>) {
     let mut r = layout::row();
     r.fit(&*Label::styled("Volume", TextStyle::Body).tone(Tone::Dim));
-    let _s = Slider::new(v, 0.0, 1.0, 0.05);
+    let _s = Slider::new(v, 0.0, 1.0, 0.05).accessible_name("Volume");
     let pct = Label::new("64%").right();
     r.fit(&*pct);
     r.close_fitted();

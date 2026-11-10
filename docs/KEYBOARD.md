@@ -35,6 +35,9 @@ and every component follows the same rules.
    same as its hover cursor (the Omarchy default), the ring gets a
    full-strength accent border so it cannot be missed.
    `theme::set_focus_ring(FocusRing::Theme)` uses the theme tokens exactly.
+   Every component draws it, rows and switches included. A `Table` or
+   `Tree` focused before it has a cursor rings its whole body; the first
+   arrow then lands on the first row.
 
 ## Right to left
 

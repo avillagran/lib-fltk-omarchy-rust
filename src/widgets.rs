@@ -637,9 +637,11 @@ impl ToggleSwitch {
                 let x = w.x() + (w.w() - tw) / 2;
                 let y = w.y() + (w.h() - th) / 2;
                 if s.hover || s.focus {
+                    // Keyboard focus: the focus tokens (accent ring), not hover.
+                    let st = if s.focus { &t.controls.focus } else { &t.controls.hover };
                     let pad = t.spacing.md;
                     paint::surface(x - pad, y - pad, tw + 2 * pad, th + 2 * pad, t.radius, None,
-                                   Some((t.border(&t.controls.hover, under()), t.controls.hover.border_width.max(1))));
+                                   Some((t.border(st, under()), st.border_width.max(1))));
                 }
                 draw_switch(t, x, y, k, false, under(), crate::layout::is_rtl(w));
             });
@@ -1613,7 +1615,15 @@ impl Row {
             let s = interaction(w, &st);
             theme::with(|t| {
                 let under = under();
-                let look = fade.get(row_look(t, s.hover || s.focus, current, under), 60, Ease::Linear, w);
+                // Keyboard focus uses the focus tokens (accent ring by
+                // default, docs/KEYBOARD.md rule 7), not the hover cursor.
+                let target = if s.focus {
+                    let f = &t.controls.focus;
+                    paint::Look { fill: t.fill(f, under), border: t.border(f, under), border_width: f.border_width.max(1) }
+                } else {
+                    row_look(t, s.hover, current, under)
+                };
+                let look = fade.get(target, 60, Ease::Linear, w);
                 paint::draw_look(w.x(), w.y(), w.w(), w.h(), t.radius, look, under);
                 draw_row_content(t, w.x(), w.y(), w.w(), w.h(), &icon, &label, &detail, current, crate::layout::is_rtl(w));
             });

@@ -75,7 +75,7 @@ impl DiffFiles {
             sy.set(false);
             w.redraw();
         });
-        let (v, tree) = (view.downgrade(), files.tree.clone());
+        let (v, tree, p4, sy) = (view.downgrade(), files.tree.clone(), panel.downgrade(), syncing.clone());
         let refresh = move || {
             let Some(v) = v.upgrade() else { return };
             let dirs = v.with_patch(|p| {
@@ -86,6 +86,13 @@ impl DiffFiles {
             tree.refresh();
             for d in dirs {
                 tree.expand(d);
+            }
+            // Show the file the view shows (the first one before any
+            // cursor), so the tree never starts without a current row.
+            if let Some(p) = p4.upgrade().filter(|p| p.cursor().is_none()) {
+                sy.set(true);
+                p.select_only(v.current_file().unwrap_or(0) as ItemId);
+                sy.set(false);
             }
         };
         refresh();

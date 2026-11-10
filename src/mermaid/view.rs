@@ -223,7 +223,7 @@ fn draw(w: &mut Widget, s: &mut ViewState) {
                 paint::text(&crate::tr!("Diagram: {reason}", reason = e.to_string()), x + pad, y + pad, ww - 2 * pad, lh, t.font.caption, false, dim, Align::Left);
                 fltk::draw::set_font(Font::Courier, t.font.body);
                 fltk::draw::set_draw_color(t.palette.foreground.fl());
-                fltk::draw::draw_text2(&paint::escape(&s.src), x + pad, y + pad + lh, ww - 2 * pad, wh - 2 * pad - lh, Align::Left | Align::Top | Align::Inside | Align::Clip);
+                fltk::draw::draw_text2(&s.src, x + pad, y + pad + lh, ww - 2 * pad, wh - 2 * pad - lh, Align::Left | Align::Top | Align::Inside | Align::Clip);
             });
             s.result = Some(Err(e));
         }

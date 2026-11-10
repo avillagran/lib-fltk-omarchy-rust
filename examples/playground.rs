@@ -4,6 +4,7 @@
 //! size, native gestures and panics.
 //!   cargo run --release --example playground [log path]
 use fltk::prelude::*;
+use fltk_omarchy::a11y::AccessibleExt;
 use fltk_omarchy::focus;
 use fltk_omarchy::gfx::{self, Hit, Paint, Path, Rate, Stroke, View};
 use fltk_omarchy::layout::{self, FlexExt};
@@ -88,7 +89,7 @@ fn main() {
     r.fit(&*bg);
     let wifi = State::new(true);
     wifi.subscribe(|v| log(format!("switch wifi → {v}"))).forever();
-    let sw = ToggleSwitch::new(&wifi);
+    let sw = ToggleSwitch::new(&wifi).accessible_name("Wi-Fi");
     r.fit(&*sw);
     name(&names, &*sw, "switch");
     r.close_fitted();
@@ -101,7 +102,7 @@ fn main() {
     vol.subscribe(|v| log(format!("slider → {v:.2}"))).forever();
     let mut r = layout::row();
     r.fit(&*Label::new("Volume"));
-    let sl = Slider::new(&vol, 0.0, 1.0, 0.05);
+    let sl = Slider::new(&vol, 0.0, 1.0, 0.05).accessible_name("Volume");
     name(&names, &*sl, "slider");
     r.fit(&*Label::new("").right().bind(&vol.map(|v| format!("{:.0}%", v * 100.0))));
     r.close_fitted();
@@ -117,7 +118,7 @@ fn main() {
     name(&names, &pw.input(), "password");
     let num = State::new(42i64);
     num.subscribe(|v| log(format!("number → {v}"))).forever();
-    r.fit(&*NumberField::new(&num, 0, 100, 1));
+    r.fit(&*NumberField::new(&num, 0, 100, 1).accessible_name("Number"));
     r.close_fitted();
     let out = State::new(0usize);
     out.subscribe(|v| log(format!("dropdown → {v}"))).forever();

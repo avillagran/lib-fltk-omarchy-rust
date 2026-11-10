@@ -1406,7 +1406,7 @@ impl TextArea {
                 draw::set_draw_color(ph.fl());
                 let lh = lay.line_h;
                 draw::draw_text2(
-                    &paint::escape(&s.placeholder),
+                    &s.placeholder,
                     tx,
                     ty,
                     tw,

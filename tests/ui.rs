@@ -103,6 +103,66 @@ fn main() {
         check(t.palette.accent == theme::Rgb(0xe68e0d), "accent")?;
         check(t.spacing.control_height == 28 && t.font.body == 12, "tokens")
     });
+    run("text: an @ is drawn once (no FLTK symbol escaping in painted text)", &|shots| {
+        let mut win = AppWindow::new("t", 300, 120);
+        let mut body = win.body();
+        let l = Label::new("@");
+        body.fit(&*l);
+        win.end();
+        let p = shots.join("at-sign.png");
+        win.snapshot(&p).map_err(|e| e.to_string())?;
+        let bg = theme::with(|t| t.palette.background);
+        let bg = [(bg.0 >> 16) as u8, (bg.0 >> 8) as u8, bg.0 as u8];
+        let (mut first, mut last) = (i32::MAX, i32::MIN);
+        for y in l.y()..l.y() + l.h() {
+            for x in l.x()..l.x() + l.w() {
+                let px = pixel(&p, x, y)?;
+                if (0..3).map(|i| (px[i] as i32 - bg[i] as i32).abs()).sum::<i32>() > 60 {
+                    first = first.min(x);
+                    last = last.max(x);
+                }
+            }
+        }
+        let one = theme::with(|t| fltk_omarchy::paint::measure("@", t.font.body, false));
+        check(last >= first && last - first <= one + 1, &format!("ink {first}..{last} for one @ ({one} px wide)"))
+    });
+    run("focus ring: Row, ToggleSwitch and a Tree without cursor show the focus border, not hover", &|shots| {
+        let mut win = AppWindow::new("t", 360, 300);
+        let mut body = win.body();
+        let row = Row::new(glyph::MONITOR, "Display");
+        body.fit(&*row);
+        let on = State::new(false);
+        let sw = ToggleSwitch::new(&on);
+        body.fit(&*sw);
+        let panel = KeyboardPanel::new("tree");
+        let tree = Tree::new(&panel, |parent| if parent.is_none() { vec![TreeNode::new(1, "One"), TreeNode::new(2, "Two")] } else { vec![] });
+        body.fit(&*tree);
+        win.end();
+        let (under, ring) = theme::with(|t| (t.palette.background, t.border(&t.controls.focus, t.palette.background)));
+        let ring = [(ring.0 >> 16) as u8, (ring.0 >> 8) as u8, ring.0 as u8];
+        let near = |p: [u8; 3]| (0..3).all(|i| (p[i] as i32 - ring[i] as i32).abs() <= 40);
+        let _ = under;
+        focus::first(&*win).ok_or("first")?;
+        press("Tab");
+        press("Shift+Tab");
+        let p = shots.join("ring-row.png");
+        win.snapshot(&p).map_err(|e| e.to_string())?;
+        let px = pixel(&p, row.x(), row.y() + row.h() / 2)?;
+        check(focus::is_focused(&*row) && near(px), &format!("row ring {px:?}, want {ring:?}"))?;
+        press("Tab");
+        let p = shots.join("ring-switch.png");
+        win.snapshot(&p).map_err(|e| e.to_string())?;
+        let mut hit = false;
+        for x in sw.x()..sw.x() + sw.w() {
+            hit |= near(pixel(&p, x, sw.y() + sw.h() / 2)?);
+        }
+        check(focus::is_focused(&*sw) && hit, &format!("switch ring {ring:?} on its middle line"))?;
+        press("Tab");
+        let p = shots.join("ring-tree.png");
+        win.snapshot(&p).map_err(|e| e.to_string())?;
+        let px = pixel(&p, tree.x(), tree.y() + tree.h() / 2)?;
+        check(panel.has_focus() && panel.cursor().is_none() && near(px), &format!("tree body ring {px:?}, want {ring:?}"))
+    });
     run("primary button is painted with the accent", &|shots| {
         let mut win = AppWindow::new("t", 300, 140);
         let mut body = win.body();

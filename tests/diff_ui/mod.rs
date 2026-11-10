@@ -428,9 +428,7 @@ pub fn checks(run: &mut dyn FnMut(&str, Check)) {
         let labels: Vec<String> = (0..tree.visible_len()).filter_map(|i| tree.node(i)).map(|n| format!("{}|{}", n.label, n.detail)).collect();
         check(labels == ["src|", "player.rs|M  +3 −2", "docs|", "NEW.md ← OLD.md|R  +1 −1", "logo.png|M  ·"], &format!("{labels:?}"))?;
         files.panel().focus();
-        press("Down");
-        press("Down");
-        check(files.panel().cursor() == Some(0) && v.current_file() == Some(0), &format!("tree cursor {:?}", files.panel().cursor()))?;
+        check(files.panel().cursor() == Some(0) && files.panel().is_selected(0), &format!("tree starts on the first file, the one the view shows: {:?} {:?}", files.panel().cursor(), v.current_file()))?;
         press("Down");
         press("Down");
         check(v.current_file() == Some(1) && v.row_rect(v.row_of_hunk(1, 0).unwrap() - 1).unwrap().1 == v.y(), "Down in the tree shows file 1 at the top")?;

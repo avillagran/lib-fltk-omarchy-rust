@@ -1142,6 +1142,10 @@ fn tree_draw(w: &mut Widget, st: &Rc<RefCell<TrState>>) {
         }
         draw::pop_clip();
         scrollbar(t, m.x(w.x() + w.w() - BAR, BAR), w.y(), w.h(), s.top, content);
+        // Focused with no cursor row yet (like Table): ring the body.
+        if ring && cursor.is_none() {
+            paint::stroke(w.x(), w.y(), w.w(), w.h(), t.radius, 1, t.border(&t.controls.focus, under));
+        }
     });
 }
 

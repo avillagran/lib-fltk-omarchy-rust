@@ -185,7 +185,8 @@ pub(crate) fn text_font(s: &str, r: Rect, size: i32, font: Font, color: Rgb, ali
     if scene::record(|| Command::Text { rect: r, text: s.to_owned(), font, size, color, align }) { return; }
     draw::set_font(font, size);
     draw::set_draw_color(color.fl());
-    draw::draw_text2(&escape(s), r.x, r.y, r.w, r.h, align | Align::Inside | Align::Clip);
+    // draw_text2 calls fl_draw with draw_symbols off: '@' is literal here.
+    draw::draw_text2(s, r.x, r.y, r.w, r.h, align | Align::Inside | Align::Clip);
 }
 
 /// Like [`text`] but cuts with "…" when it does not fit (Text.ElideRight).
@@ -222,7 +223,10 @@ pub fn glyph(g: &str, x: i32, y: i32, w: i32, h: i32, size: i32, color: Rgb) {
     text(g, x, y, w, h, size, false, color, Align::Center);
 }
 
-/// FLTK treats '@' as a symbol prefix in labels; draw it literally.
+/// FLTK treats '@' as a symbol prefix in widget labels (`set_label`,
+/// `set_tooltip`): this keeps it literal there. Not for this module's
+/// painting functions or `draw::draw_text2`, which already draw '@' as is
+/// (escaping there shows "@@").
 pub fn escape(s: &str) -> String {
     s.replace('@', "@@")
 }
