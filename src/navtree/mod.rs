@@ -521,7 +521,8 @@ fn paint_surface(
         for g in &rm.ghosts {
             let (dy, o) = g.sample(drift);
             let ry = y + g.y + dy;
-            fltk::draw::push_clip(x, ry, w, g.row.h);
+            // The leaving row collapses as the rows below close the gap.
+            fltk::draw::push_clip(x, y + g.y, w, g.open_height(g.row.h));
             rows::paint_row(
                 t,
                 &m,

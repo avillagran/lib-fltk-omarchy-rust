@@ -66,6 +66,14 @@ impl<R> Ghost<R> {
         let k = Ease::InCubic.apply(self.tween.t());
         ((k * drift).round() as i32, 1.0 - k)
     }
+
+    /// How much of the leaving row's height is still open, `h` → 0, with
+    /// the same curve as the rows below that close the gap (OutCubic): the
+    /// owner clips the ghost to it so the row collapses instead of being
+    /// covered.
+    pub fn open_height(&self, h: i32) -> i32 {
+        (h as f64 * (1.0 - Ease::OutCubic.apply(self.tween.t()))).round() as i32
+    }
 }
 
 pub(crate) struct RowMotion<R> {
@@ -254,6 +262,10 @@ mod tests {
         assert_eq!(m.at(1, 22.0).0, -30, "displaced row starts where it was");
         assert_eq!(m.at(3, 22.0).0, 0, "same place: no motion");
         assert_eq!(m.ghosts.len(), 1, "removed row leaves a ghost");
+        assert_eq!(m.ghosts[0].open_height(30), 30, "the ghost starts at full height");
+        anim::clock::advance(Duration::from_millis(150));
+        let mid = m.ghosts[0].open_height(30);
+        assert!(mid > 0 && mid < 30, "it collapses: {mid}");
         assert!(m.running());
         anim::clock::advance(Duration::from_millis(600));
         assert_eq!(m.at(1, 22.0), (0, 1.0, 0.0));

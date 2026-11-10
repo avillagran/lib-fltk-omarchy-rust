@@ -69,7 +69,7 @@ and o3 (`ui/qml`). They are in `anim::ms`.
 | **List** rows (`List::from_model`) making room | 442 ms OutCubic (`ms::ROW_DISPLACED`) | o3 `T3Panel.qml` `RowDisplaced` (0.85 × 520 ms) |
 | A row moved elsewhere (`move_key`) flies there, lifted | 520 ms InOutCubic, shadow and accent rim peaking mid-way | o3 `T3RowFlight.qml`, `rowMoveMs` |
 | A row arriving | 360 ms: waits a fifth, then fades in (OutCubic) and settles (OutBack 1.2) | o3 `T3ThreadRow.qml` `arrive` |
-| A row leaving | 300 ms InCubic: fades out, drifts 22 px | o3 `T3ThreadRow.qml` `depart` |
+| A row leaving | 300 ms InCubic: fades out, drifts 22 px, and collapses (its height closes with the rows below, OutCubic) in List, Tree, Sidebar and NavTree | o3 `T3ThreadRow.qml` `depart` |
 | **Tree** branch opening / closing: rows below slide | 200 ms (`ms::REVEAL`) | Omarchy `Ui/KeyboardPanel.qml` `drawnHeight` |
 | **RichText**: a new message (`append_markdown`, `append_blocks`) fades in | 360 ms OutCubic; streaming into it (`push_markdown`) costs nothing | o3 row arrival |
 | Wheel scrolling | 120 ms to the exact destination (unchanged, `scroll`) | — |
@@ -249,5 +249,3 @@ motion no frame is pending (`anim::pending() == 0`): the timer stops.
   from 97 % to full size and the content inside stays at its final size
   (FLTK has no transforms). A layer showing several cards at once (a menu
   with an open submenu) fades without the grow.
-- `Sidebar`/`NavTree` rows that leave fade out in place while the rows
-  below slide up over them (no height collapse of the leaving row itself).

@@ -314,8 +314,11 @@ impl List {
                     for g in &i.rm.ghosts {
                         let (dy, o) = g.sample(drift);
                         let ry = w.y() + g.y + dy;
+                        // The leaving row collapses as the rows below close the gap.
+                        fltk::draw::push_clip(m.x(w.x(), text_w), w.y() + g.y, text_w, g.open_height(i.row_h));
                         draw_row(t, m.x(w.x(), text_w), ry, text_w, i.row_h, &g.row.icon, &g.row.label, &g.row.detail, false, false, under, m.on);
                         paint::alpha_fill(m.x(w.x(), text_w), ry, text_w, i.row_h, under, 1.0 - o);
+                        fltk::draw::pop_clip();
                     }
                     // Rows in flight on top: a lifted card (o3 T3RowFlight).
                     for (idx, ry, bow, r) in lifted {

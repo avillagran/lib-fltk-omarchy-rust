@@ -1134,8 +1134,11 @@ fn tree_draw(w: &mut Widget, st: &Rc<RefCell<TrState>>) {
             for g in &s.rm.ghosts {
                 let (dy, o) = g.sample(drift);
                 let ry = w.y() + g.y + dy;
+                // The leaving row collapses as the rows below close the gap.
+                draw::push_clip(m.x(w.x(), rw), w.y() + g.y, rw, g.open_height(rh));
                 paint_row(s, &g.row, ry, None);
                 paint::alpha_fill(m.x(w.x(), rw), ry, rw, rh, under, 1.0 - o);
+                draw::pop_clip();
             }
             s.rm.end(drawn);
             if s.rm.running() { crate::anim::request_redraw(w); }
