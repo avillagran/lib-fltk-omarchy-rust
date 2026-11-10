@@ -32,8 +32,7 @@ thread_local! {
     static CARD_COUNT: Cell<u32> = const { Cell::new(0) };
     // While a fading layer draws clipped to its growing card: that rect.
     static GROW: Cell<Option<(i32, i32, i32, i32)>> = const { Cell::new(None) };
-    // The card each open layer drew last.
-    static CARDS: RefCell<Vec<(Widget, CardRect)>> = const { RefCell::new(Vec::new()) };
+
     #[cfg(feature="gpu")]
     static LAYER_REVISION: Cell<u64> = const { Cell::new(0) };
 }
@@ -319,7 +318,6 @@ fn alive_ptr(w: &Widget) -> usize {
 /// The end of a fade-out: removes and deletes the layer.
 fn finish_close(layer: &Widget) {
     let lp = alive_ptr(layer);
-    CARDS.with(|c| c.borrow_mut().retain(|(w, _)| !w.was_deleted() && alive_ptr(w) != lp));
     MOTION.with(|m| m.borrow_mut().retain(|(x, _)| !x.was_deleted() && alive_ptr(x) != lp));
     if lp == 0 {
         return;
@@ -394,10 +392,22 @@ fn paint_layer<W: WidgetExt>(l: &mut W, f: &mut impl FnMut(&mut W)) {
     if p <= 0.0 {
         return;
     }
-    // The card this layer drew last (any frame, faded or not).
-    let lp = alive_ptr(&widget);
-    let last = CARDS.with(|c| c.borrow().iter().find(|(x, _)| alive_ptr(x) == lp).map(|(_, r)| *r));
-    let grow = last.filter(|_| p < 1.0 && crate::anim::enabled()).map(|c| grown(c, p));
+    // While it fades: where is its card? A pass clipped to nothing finds
+    // it (nothing reaches the screen), so each frame depends only on the
+    // phase. Only a layer with one card grows (open submenus: just fade).
+    let mut grow = None;
+    if p < 1.0 && crate::anim::enabled() {
+        DRAWING.with(|d| d.set(p));
+        CARD.with(|c| c.set(None));
+        CARD_COUNT.with(|n| n.set(0));
+        draw::push_clip(l.x(), l.y(), 0, 0);
+        f(l);
+        draw::pop_clip();
+        let card = CARD.with(|c| c.take());
+        if CARD_COUNT.with(|n| n.get()) == 1 {
+            grow = card.map(|c| grown(c, p));
+        }
+    }
     DRAWING.with(|d| d.set(p));
     CARD.with(|c| c.set(None));
     CARD_COUNT.with(|n| n.set(0));
@@ -412,15 +422,6 @@ fn paint_layer<W: WidgetExt>(l: &mut W, f: &mut impl FnMut(&mut W)) {
     }
     DRAWING.with(|d| d.set(1.0));
     let card = CARD.with(|c| c.take());
-    // Only a layer with one card grows (several: submenus stay as they are).
-    let single = CARD_COUNT.with(|n| n.get()) == 1;
-    CARDS.with(|cs| {
-        let mut cs = cs.borrow_mut();
-        cs.retain(|(x, _)| !x.was_deleted() && alive_ptr(x) != lp);
-        if let Some(c) = card.filter(|_| single) {
-            cs.push((widget.clone(), c));
-        }
-    });
     if p < 1.0 {
         if let Some(c) = card {
             let (x, y, w, h) = if grow.is_some() { grown(c, p) } else { (c.x, c.y, c.w, c.h) };

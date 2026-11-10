@@ -159,7 +159,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scene-wayland
-          path: build/test-ui/shots/scene-*.png
+          path: build/test-ui/runs/*/shots/scene-*.png
 
   macos:
     name: macOS
@@ -191,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scene-macos
-          path: build/test-ui/shots/scene-*.png
+          path: build/test-ui/runs/*/shots/scene-*.png
 
   windows:
     name: Windows
