@@ -9,7 +9,7 @@ use crate::paint;
 use crate::state::State;
 use crate::theme::{self, Rgb, Theme};
 use crate::widgets::glyph;
-use fltk::{app, enums::*, prelude::*, widget::Widget};
+use fltk::{app, draw, enums::*, prelude::*, widget::Widget};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
@@ -27,9 +27,27 @@ thread_local! {
     static MOTION: RefCell<Vec<(Widget, Fade)>> = const { RefCell::new(Vec::new()) };
     // While a layer draws: its presence (0..1) and the card it painted.
     static DRAWING: Cell<f64> = const { Cell::new(1.0) };
-    static CARD: Cell<Option<(i32, i32, i32, i32)>> = const { Cell::new(None) };
+    static CARD: Cell<Option<CardRect>> = const { Cell::new(None) };
+    // Cards painted in this layer draw (a menu with open submenus has several).
+    static CARD_COUNT: Cell<u32> = const { Cell::new(0) };
+    // While a fading layer draws clipped to its growing card: that rect.
+    static GROW: Cell<Option<(i32, i32, i32, i32)>> = const { Cell::new(None) };
+    // The card each open layer drew last.
+    static CARDS: RefCell<Vec<(Widget, CardRect)>> = const { RefCell::new(Vec::new()) };
     #[cfg(feature="gpu")]
     static LAYER_REVISION: Cell<u64> = const { Cell::new(0) };
+}
+
+/// The card a layer painted: its rect and border (redrawn at the growing
+/// size while the layer fades).
+#[derive(Clone, Copy)]
+struct CardRect {
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    border: Rgb,
+    border_width: i32,
 }
 
 // A shared layer transition retains its sampled starting phase on reversal.
@@ -301,6 +319,7 @@ fn alive_ptr(w: &Widget) -> usize {
 /// The end of a fade-out: removes and deletes the layer.
 fn finish_close(layer: &Widget) {
     let lp = alive_ptr(layer);
+    CARDS.with(|c| c.borrow_mut().retain(|(w, _)| !w.was_deleted() && alive_ptr(w) != lp));
     MOTION.with(|m| m.borrow_mut().retain(|(x, _)| !x.was_deleted() && alive_ptr(x) != lp));
     if lp == 0 {
         return;
@@ -354,18 +373,60 @@ pub(crate) fn capture_phase(l: &Widget) -> u64 {
 pub(crate) fn draw_layer(layer: &mut Widget, mut f: impl FnMut(&mut Widget) + 'static) {
     layer.draw(move |l| paint_layer(l, &mut f));
 }
+/// Omarchy's PopupCard grows from 97 % to full size from its top edge as
+/// it fades in, and shrinks back as it fades out (`scale: 0.97 + 0.03 *
+/// shown`). FLTK has no transforms: the layer is clipped to the card at
+/// that size and the card's border redrawn there. The window under the
+/// layer is redrawn every frame while a layer is open, so what is outside
+/// the smaller card is the real content (a scrim still covers it all).
+pub(crate) const POPUP_START_SCALE: f64 = 0.97;
+
+fn grown(c: CardRect, p: f64) -> (i32, i32, i32, i32) {
+    let s = POPUP_START_SCALE + (1.0 - POPUP_START_SCALE) * p.clamp(0.0, 1.0);
+    let w = (c.w as f64 * s).round() as i32;
+    let h = (c.h as f64 * s).round() as i32;
+    (c.x + (c.w - w) / 2, c.y, w, h)
+}
+
 fn paint_layer<W: WidgetExt>(l: &mut W, f: &mut impl FnMut(&mut W)) {
     let widget = l.as_base_widget();
     let p = presence(&widget);
     if p <= 0.0 {
         return;
     }
+    // The card this layer drew last (any frame, faded or not).
+    let lp = alive_ptr(&widget);
+    let last = CARDS.with(|c| c.borrow().iter().find(|(x, _)| alive_ptr(x) == lp).map(|(_, r)| *r));
+    let grow = last.filter(|_| p < 1.0 && crate::anim::enabled()).map(|c| grown(c, p));
     DRAWING.with(|d| d.set(p));
     CARD.with(|c| c.set(None));
+    CARD_COUNT.with(|n| n.set(0));
+    if let Some((x, y, w, h)) = grow {
+        draw::push_clip(x, y, w, h);
+        GROW.with(|g| g.set(grow));
+    }
     f(l);
+    if grow.is_some() {
+        GROW.with(|g| g.set(None));
+        draw::pop_clip();
+    }
     DRAWING.with(|d| d.set(1.0));
+    let card = CARD.with(|c| c.take());
+    // Only a layer with one card grows (several: submenus stay as they are).
+    let single = CARD_COUNT.with(|n| n.get()) == 1;
+    CARDS.with(|cs| {
+        let mut cs = cs.borrow_mut();
+        cs.retain(|(x, _)| !x.was_deleted() && alive_ptr(x) != lp);
+        if let Some(c) = card.filter(|_| single) {
+            cs.push((widget.clone(), c));
+        }
+    });
     if p < 1.0 {
-        if let Some((x, y, w, h)) = CARD.with(|c| c.take()) {
+        if let Some(c) = card {
+            let (x, y, w, h) = if grow.is_some() { grown(c, p) } else { (c.x, c.y, c.w, c.h) };
+            if grow.is_some() && c.border_width > 0 {
+                theme::with(|t| paint::surface(x, y, w, h, t.radius, None, Some((c.border, c.border_width))));
+            }
             let bg = theme::with(bg);
             paint::alpha_fill(x, y, w, h, bg, 1.0 - p);
         }
@@ -391,9 +452,10 @@ extern "C" {
 /// Card surface with the given section style.
 pub(crate) fn card(t: &Theme, x: i32, y: i32, w: i32, h: i32, surface: &theme::Surface, border_width: i32) {
     // The card a fading layer veils (see `draw_layer`).
-    CARD.with(|c| if c.get().is_none() { c.set(Some((x, y, w, h))) });
     let fill = surface.fill(bg(t));
     let border = surface.border.over(fill, surface.border_alpha);
+    CARD.with(|c| if c.get().is_none() { c.set(Some(CardRect { x, y, w, h, border, border_width })) });
+    CARD_COUNT.with(|n| n.set(n.get() + 1));
     paint::surface(x, y, w, h, t.radius, Some(fill), Some((border, border_width)));
 }
 
@@ -797,7 +859,15 @@ impl ConfirmDialog {
 pub fn draw_scrim(l: &Widget, color: Rgb, alpha: f64) {
     // A layer fading in or out fades its scrim too.
     let p = DRAWING.with(|d| d.get());
+    // The scrim covers the whole layer, outside the growing card's clip.
+    let grow = GROW.with(|g| g.get());
+    if grow.is_some() {
+        draw::pop_clip();
+    }
     paint::alpha_fill(l.x(), l.y(), l.w(), l.h(), color, alpha * p);
+    if let Some((x, y, w, h)) = grow {
+        draw::push_clip(x, y, w, h);
+    }
 }
 
 // ============================================================ Notification

@@ -268,7 +268,9 @@ pub fn checks(run: &mut dyn FnMut(&str, Check)) {
             let (x, y, w, _) = h.rect().ok_or("menu rect")?;
             let (px, py) = (x + w - 12, y + 6);
             let t0 = shot(&win, shots, "motion-pop-1-t0.png")?;
-            ms(60);
+            ms(16);
+            shot(&win, shots, "motion-pop-1-t16.png")?;
+            ms(44);
             let mid = shot(&win, shots, "motion-pop-2-t60.png")?;
             ms(200);
             let open = shot(&win, shots, "motion-pop-3-open.png")?;
@@ -292,6 +294,20 @@ pub fn checks(run: &mut dyn FnMut(&str, Check)) {
                 &format!("60 ms: between {bg:?} and {z:?}: {m:?}"),
             )?;
             check(d(z, bg) > 3, &format!("open: the card {z:?}"))?;
+            // Omarchy's PopupCard grows from 97 % from its top edge: at 60 ms
+            // the card's right edge is still inside its final one.
+            let right_edge = |p: &Path| -> Result<i32, String> {
+                let row = y + 8;
+                let mut edge = x;
+                for cx in x..(x + w + 4).min(win.w()) {
+                    if d(super::pixel(p, cx, row)?, super::pixel(&before, cx, row)?) > 6 {
+                        edge = cx;
+                    }
+                }
+                Ok(edge)
+            };
+            let (em, ez) = (right_edge(&mid)?, right_edge(&open)?);
+            check(em < ez && ez - em <= (w as f64 * 0.03).ceil() as i32 + 1, &format!("60 ms: right edge {em} inside the open {ez} (card {w} wide)"))?;
             h.close();
             check(focus::is_focused(&*anchor), "focus is back at once")?;
             check(

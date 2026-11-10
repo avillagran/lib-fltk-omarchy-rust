@@ -64,7 +64,7 @@ and o3 (`ui/qml`). They are in `anim::ms`.
 | `NavTree::reveal` / `scroll_to` | 120 ms (the wheel's glide) | — |
 | Busy spinner (`SidebarItem::busy`, `NavItem::busy`, `Badge::spinner`) | one turn per second, only while animations are on (a still frame when off) | — |
 | PopupMenu submenu hover intent / aim grace | 200 ms / 300 ms (`ms::SUBMENU_OPEN`, `ms::SUBMENU_AIM`); timed on the animation clock (`anim::clock`), kept when motion is off (it is intent, not motion); the submenu card fades in and out like any popup | desktop menus (GTK `gtk-menu-popup-delay`, 225 ms) |
-| **Popups** (PopupMenu, Dropdown, SearchableDropdown, Menu, ConfirmDialog, PopupCard, ShortcutHelp, toasts, completion lists): in / out | 180 ms / 120 ms, Omarchy `Style.easeOut` (cubic Bézier 0.23, 1, 0.32, 1); the scrim fades with the card | Omarchy `Ui/PopupCard.qml` |
+| **Popups** (PopupMenu, Dropdown, SearchableDropdown, Menu, ConfirmDialog, PopupCard, ShortcutHelp, toasts, completion lists): in / out | 180 ms / 120 ms, Omarchy `Style.easeOut` (cubic Bézier 0.23, 1, 0.32, 1); the card grows from 97 % to full size from its top edge as it fades in and shrinks back as it fades out (`0.97 + 0.03 × shown`); the scrim fades with the card | Omarchy `Ui/PopupCard.qml` |
 | **TabBar** selection (fill and accent line) slides | 160 ms OutCubic (`ms::INDICATOR`) | o3 `T3Panel.qml` group chips (160 ms OutCubic), Omarchy clock panel (160 ms OutCubic) |
 | **List** rows (`List::from_model`) making room | 442 ms OutCubic (`ms::ROW_DISPLACED`) | o3 `T3Panel.qml` `RowDisplaced` (0.85 × 520 ms) |
 | A row moved elsewhere (`move_key`) flies there, lifted | 520 ms InOutCubic, shadow and accent rim peaking mid-way | o3 `T3RowFlight.qml`, `rowMoveMs` |
@@ -245,7 +245,9 @@ motion no frame is pending (`anim::pending() == 0`): the timer stops.
 - GNOME, macOS and Windows have no change notification here: a change of
   the setting is picked up when the next animation starts (that one still
   follows the old value).
-- Popup cards fade; they do not scale (Omarchy's 0.97 → 1 grow is left
-  out).
+- Popup cards grow by clipping, not by scaling: the edge of the card moves
+  from 97 % to full size and the content inside stays at its final size
+  (FLTK has no transforms). A layer showing several cards at once (a menu
+  with an open submenu) fades without the grow.
 - `Sidebar`/`NavTree` rows that leave fade out in place while the rows
   below slide up over them (no height collapse of the leaving row itself).
