@@ -271,8 +271,19 @@ pub(crate) struct Conn(UnixStream);
 impl Conn {
     pub(crate) fn set_timeout(&mut self, d: Option<Duration>) -> io::Result<()> {
         let d = d.map(|d| d.max(Duration::from_millis(1)));
-        self.0.set_read_timeout(d)?;
-        self.0.set_write_timeout(d)
+        // macOS and the BSDs refuse socket options with EINVAL once the
+        // peer has closed (a server that answered "busy" at once). The
+        // reply is still buffered and the next read returns it or EOF, so
+        // that is not an error here.
+        let peer_gone = |e: io::Error| {
+            if e.raw_os_error() == Some(libc::EINVAL) {
+                Ok(())
+            } else {
+                Err(e)
+            }
+        };
+        self.0.set_read_timeout(d).or_else(peer_gone)?;
+        self.0.set_write_timeout(d).or_else(peer_gone)
     }
 
     pub(crate) fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
