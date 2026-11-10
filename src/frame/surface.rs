@@ -609,9 +609,7 @@ mod tests {
     use crate::frame::Mods;
 
     fn dir(tag: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("fltk-omarchy-surface-{tag}-{}", std::process::id()));
-        std::fs::create_dir_all(&d).unwrap();
-        d
+        crate::test_fixture::dir(&format!("surface-{tag}"))
     }
 
     /// Removes the (empty) test directories: never a tree.

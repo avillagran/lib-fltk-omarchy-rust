@@ -243,8 +243,7 @@ pub(crate) mod tests {
 
     #[test]
     fn watch_sees_a_replaced_file() {
-        let dir = std::env::temp_dir().join(format!("fltk-omarchy-framefile-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = crate::test_fixture::dir("framefile");
         let path = dir.join("frame.bmp");
         let tmp = dir.join("frame.bmp.next");
         std::fs::write(&path, bmp24(2, 2, &|_, _| [1, 2, 3])).unwrap();
@@ -266,8 +265,7 @@ pub(crate) mod tests {
         wait(2);
         stop.store(true, Ordering::Relaxed);
         t.join().unwrap();
-        let _ = std::fs::remove_file(&path);
-        let _ = std::fs::remove_dir(&dir);
+        crate::test_fixture::tidy(&dir, &["frame.bmp", "frame.bmp.next"]);
         let seen = seen.lock().unwrap();
         assert_eq!(seen.len(), 2, "initial + replaced");
         assert_eq!(seen[1], Ok(9));

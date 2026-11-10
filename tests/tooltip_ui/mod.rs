@@ -100,10 +100,14 @@ fn write_colors(colors: &str) {
     // Like omarchy-theme-set: a new directory renamed over `theme`.
     let state = PathBuf::from(std::env::var("OMARCHY_FLTK_STATE_DIR").unwrap());
     let next = state.join("next-tooltip-theme");
-    let _ = std::fs::remove_dir_all(&next);
-    std::fs::create_dir_all(&next).unwrap();
+    if next.exists() {
+        super::retire(&next);
+    }
+    std::fs::create_dir(&next).unwrap();
     std::fs::write(next.join("colors.toml"), colors).unwrap();
-    let _ = std::fs::remove_dir_all(state.join("theme"));
+    if state.join("theme").exists() {
+        super::retire(&state.join("theme"));
+    }
     std::fs::rename(&next, state.join("theme")).unwrap();
 }
 
@@ -332,7 +336,7 @@ pub fn checks(run: &mut dyn FnMut(&str, Check), colors_a: &'static str, colors_b
                 border == fill,
                 &format!("no border drawn: {border:?} vs {fill:?}"),
             )?;
-            std::fs::remove_file(&path).unwrap();
+            super::retire(&path);
             check(
                 tooltip::reload_settings() && tooltip::settings() == Settings::default(),
                 "removed: defaults",

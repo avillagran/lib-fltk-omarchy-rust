@@ -229,12 +229,7 @@ mod tests {
     use super::*;
 
     fn temp(tag: &str) -> PathBuf {
-        let d = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("target/test-tmp")
-            .join(format!("cli-{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&d);
-        std::fs::create_dir_all(&d).unwrap();
-        d
+        crate::backend::fresh_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/test-tmp"), &format!("cli-{tag}"))
     }
 
     fn s(v: &[&str]) -> Vec<String> {

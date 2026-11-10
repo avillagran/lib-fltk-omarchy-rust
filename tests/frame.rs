@@ -55,9 +55,16 @@ fn child_producer() {
 }
 
 fn private_dir(tag: &str) -> PathBuf {
-    let d = std::env::temp_dir().join(format!("fltk-omarchy-frame-it-{tag}-{}", std::process::id()));
-    std::fs::create_dir_all(&d).unwrap();
-    d
+    // A new directory every time (create_dir fails on anything existing).
+    for n in 0.. {
+        let d = std::env::temp_dir().join(format!("fo-frame-it-{tag}-{}-{n}", std::process::id()));
+        match std::fs::create_dir(&d) {
+            Ok(()) => return d,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => panic!("{}: {e}", d.display()),
+        }
+    }
+    unreachable!()
 }
 
 /// Removes the (empty) test directories: never a tree.

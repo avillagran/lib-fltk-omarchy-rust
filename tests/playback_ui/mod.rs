@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 type Check<'a> = &'a dyn Fn(&Path) -> Result<(), String>;
 
 fn root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/test-ui/playback")
+    super::run_root().join("playback")
 }
 
 /// A 6 s clip (320 × 180, 25 fps, test pattern + tone; mpeg4 and aac,

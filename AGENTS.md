@@ -164,6 +164,9 @@ fn main() {
 
 - `cargo test --offline` runs unit tests, doctests and `tests/ui.rs`
   (main-thread UI checks with pixel assertions, fake Omarchy state dir).
+  Tests never delete a tree: fixtures are new directories
+  (`src/test_fixture.rs`, `run_root()` in `tests/ui.rs`); a "removed"
+  path is moved aside with `retire`. `tests/no_tree_deletion.rs` enforces it.
 - `cargo run --example gallery` / `overlays` show every component;
   `-- --snapshot <path|dir>` writes PNGs instead.
   `cargo run --example docs_shots -- docs/components` re-renders the

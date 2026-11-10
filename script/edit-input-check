@@ -11,7 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPORT="$ROOT/build/edit-input.json"; mkdir -p "$ROOT/build"; rm -f "$REPORT"
 BIN="$ROOT/target/release/examples/edit_input_check"
 [[ -x "$BIN" ]] || cargo build --release --example edit_input_check --manifest-path "$ROOT/Cargo.toml"
-DRIVER="$(mktemp -d)"; trap 'rm -rf "$DRIVER"' EXIT
+DRIVER="$(mktemp -d)"  # kept: test runners never delete trees
 cat > "$DRIVER/keys.py" <<'PY'
 import ctypes, time
 x11 = ctypes.CDLL("libX11.so.6"); xt = ctypes.CDLL("libXtst.so.6")

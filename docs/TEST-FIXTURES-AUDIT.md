@@ -1,5 +1,32 @@
 # Validation fixture audit and execution hold
 
+## Resolution (2026-11-10)
+
+The owner reviewed the fixtures and lifted the hold for this repair. All
+recursive deletion is gone from `src/`, `tests/`, `examples/`,
+`templates/`, `script/`, `skills/` and `.github/`, and
+`tests/no_tree_deletion.rs` fails the build if `remove_dir_all`, `rm -rf`
+or `rmtree` comes back.
+
+- `tests/ui.rs` writes each run to a new directory,
+  `build/test-ui/runs/<secs>-<pid>-<n>`, created with `create_dir` (never
+  reused, never deleted; old runs are removed by hand). Every UI module
+  (playback, typo, diff, tooltip) uses that root.
+- Fixtures that simulate a removed theme, override or settings file call
+  `retire(path)`: the path is renamed to `<name>.retired-<n>` inside the
+  run root, nothing is deleted.
+- Unit tests get directories from `src/test_fixture.rs`: `dir(tag)` makes a
+  new private directory with `create_dir` (fails on any existing name,
+  symlinks included) and `tidy(dir, files)` removes only the named files it
+  wrote (never through a symlink) and then the directory if empty.
+- Template app tests (`templates/omarchy-app`) follow the same rule.
+- `script/x11-check` and `script/edit-input-check` keep their `mktemp -d`
+  driver directory. Runner scripts still replace their own single report
+  file in `build/`.
+
+The sections below are the original audit, kept for history.
+
+
 Static review on 2026-11-06 against `2d6c0ca`. No test, GUI runner, probe,
 build, formatter, or alternate validation harness was executed during this
 review. The user reported overwritten captures under `build/test-ui` and

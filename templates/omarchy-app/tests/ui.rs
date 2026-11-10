@@ -13,9 +13,13 @@ fn main() {
         println!("ui test skipped: no display (run bin/test, or xvfb-run cargo test)");
         return;
     }
-    let out = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/test-ui");
-    let _ = std::fs::remove_dir_all(&out);
-    std::fs::create_dir_all(&out).unwrap();
+    // A new directory per run (never reused, never deleted).
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/test-ui");
+    std::fs::create_dir_all(&base).unwrap();
+    let out = (0..1000)
+        .map(|n| base.join(format!("{}-{n}", std::process::id())))
+        .find(|d| std::fs::create_dir(d).is_ok())
+        .unwrap();
     // Omarchy's default look regardless of the current theme, final
     // frames only, English first.
     std::env::set_var("OMARCHY_FLTK_STATE_DIR", out.join("no-theme"));

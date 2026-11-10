@@ -701,7 +701,7 @@ mod tests {
     fn clip(name: &str) -> Option<PathBuf> {
         let ffmpeg = find_tool("ffmpeg")?;
         find_tool("ffprobe")?;
-        let path = std::env::temp_dir().join(format!("fltk-omarchy-{}-{name}.mp4", std::process::id()));
+        let path = crate::test_fixture::dir("clip").join(format!("{name}.mp4"));
         let ok = Command::new(ffmpeg)
             .args(["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=25:duration=2"])
             .args(["-f", "lavfi", "-i", "sine=frequency=440:duration=2:sample_rate=48000", "-c:v", "mpeg4", "-c:a", "aac", "-shortest"])
@@ -757,7 +757,7 @@ mod tests {
         let procs = Procs::new();
         let job = VideoJob { path: path.clone(), gen: 9, source: (320, 180), size: (2, 2), pacer: Pacer { start: 0.5, rate: (25, 1) }, single: true };
         assert_eq!(read_video(&find_tool("ffmpeg").unwrap(), &job, &procs, &slot, &ev), Ok(1));
-        let _ = std::fs::remove_file(&path);
+        crate::test_fixture::tidy(path.parent().unwrap(), &["video.mp4"]);
     }
 
     #[test]
@@ -782,11 +782,11 @@ mod tests {
         assert!(run_audio(&ffmpeg, &job, &procs).is_err());
         assert_eq!(procs.live(), 0);
         // Not media: ffprobe refuses it, nothing is left running.
-        let junk = std::env::temp_dir().join(format!("fltk-omarchy-{}-junk.mp4", std::process::id()));
+        let dir = path.parent().unwrap();
+        let junk = dir.join("junk.mp4");
         std::fs::write(&junk, b"definitely not a video").unwrap();
         assert!(probe(&junk).is_err());
-        let _ = std::fs::remove_file(&junk);
-        let _ = std::fs::remove_file(&path);
+        crate::test_fixture::tidy(dir, &["junk.mp4", "audio.mp4"]);
     }
 
     #[test]

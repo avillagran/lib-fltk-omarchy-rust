@@ -9,7 +9,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPORT="$ROOT/build/x11-check.json"; mkdir -p "$ROOT/build"; rm -f "$REPORT"
 BIN="$ROOT/target/release/examples/platform_check"
 [[ -x "$BIN" ]] || cargo build --release --example platform_check --manifest-path "$ROOT/Cargo.toml"
-DRIVER="$(mktemp -d)"; trap 'rm -rf "$DRIVER"' EXIT
+DRIVER="$(mktemp -d)"  # kept: test runners never delete trees
 cat > "$DRIVER/drag.py" <<'PY'
 import ctypes, sys, time
 x11 = ctypes.CDLL("libX11.so.6"); xt = ctypes.CDLL("libXtst.so.6")

@@ -300,10 +300,7 @@ mod tests {
     use super::*;
 
     fn temp_dir(tag: &str) -> std::path::PathBuf {
-        let d =
-            std::env::temp_dir().join(format!("fltk-omarchy-frame-{tag}-{}", std::process::id()));
-        std::fs::create_dir_all(&d).unwrap();
-        d
+        crate::test_fixture::dir(&format!("frame-{tag}"))
     }
 
     /// Removes the (empty) test directories: never a tree.

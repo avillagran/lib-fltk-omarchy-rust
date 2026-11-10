@@ -67,8 +67,8 @@ fn main() {
         return;
     }
     let strict = OS == Os::Linux || std::env::var("OMARCHY_FLTK_UI_STRICT").is_ok_and(|v| v == "1");
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/test-ui");
-    let _ = std::fs::remove_dir_all(&root);
+    let root = run_root().to_path_buf();
+    println!("ui fixtures and shots: {}", root.display());
     let state = root.join("state");
     std::fs::create_dir_all(state.join("theme")).unwrap();
     std::fs::write(state.join("theme/colors.toml"), COLORS_A).unwrap();
@@ -344,7 +344,7 @@ fn main() {
         PopupMenu::open(&*anchor, items.clone(), move |i| p5.borrow_mut().push(i));
         press("PageDown"); press("PageDown"); press("Home"); press("Enter");
         check(picked.borrow().last() == Some(&0), "Home goes back to the first entry")?;
-        std::fs::remove_file(&user).unwrap();
+        retire(&user);
         theme::reload();
         Ok(())
     });
@@ -358,7 +358,7 @@ fn main() {
             let anchor = Button::new("Actions");
             body.fit(&*anchor);
             win.end();
-            win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+            win.snapshot(run_root().join("unused.png")).ok();
             let items: Vec<PopupItem> = (0..12).map(|i| PopupItem::new("", &format!("Action {i}")).shortcut("Ctrl+Shift+F12")).collect();
             let got = Rc::new(RefCell::new(None));
             let g2 = got.clone();
@@ -369,7 +369,7 @@ fn main() {
             check(*got.borrow() == Some(11), &format!("size {size}: last entry reachable"))?;
             fltk::window::Window::delete((*win).clone());
         }
-        std::fs::remove_file(&user).unwrap();
+        retire(&user);
         theme::reload();
         check(theme::current().font.base == 12, "font restored")
     });
@@ -379,7 +379,7 @@ fn main() {
         let anchor = Button::new("Menu");
         body.fit(&*anchor);
         win.end();
-        win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        win.snapshot(run_root().join("unused.png")).ok();
         let f10 = Rc::new(RefCell::new(0));
         let f2 = f10.clone();
         win.shortcut("F10", move || *f2.borrow_mut() += 1);
@@ -529,7 +529,7 @@ fn main() {
         check(sp == [acc.r(), acc.g(), acc.b()], &format!("scaled shader output {sp:?}"))?;
         slow.invalidate();
         let mut draws = 0;
-        while slow.stats().frames < 2 && draws < 200 { win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok(); draws += 1; }
+        while slow.stats().frames < 2 && draws < 200 { win.snapshot(run_root().join("unused.png")).ok(); draws += 1; }
         let st = slow.stats();
         check(st.frames == 2 && st.partial_draws > 0, &format!("next frame spread over {draws} draws within a 1 ms budget: {st:?}"))?;
         check(st.memory > 0 && st.memory < 400_000, &format!("buffers bounded by max_area: {} bytes", st.memory))?;
@@ -594,7 +594,7 @@ fn main() {
         r.fit(&*l);
         r.close_fitted();
         win.end();
-        win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        win.snapshot(run_root().join("unused.png")).ok();
         check(l.w() > 40, &format!("width {}", l.w()))
     });
     run("transitions: Omarchy durations, intermediate colors, timer stops, can be turned off", &|shots| {
@@ -727,7 +727,7 @@ fn main() {
         let mut sd = SearchableDropdown::new("Go to", opts, &sv);
         body.fit(&*sd);
         win.end();
-        win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        win.snapshot(run_root().join("unused.png")).ok();
         let hits = Rc::new(RefCell::new(Vec::<&'static str>::new()));
         for spec in ["F1", "F10", "Ctrl+,", "Ctrl+j", "Alt+k", "Ctrl+Down"] {
             let h2 = hits.clone();
@@ -841,7 +841,7 @@ fn main() {
         let after = Button::new("After");
         body.fit(&*after);
         win.end();
-        win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        win.snapshot(run_root().join("unused.png")).ok();
 
         let name = |p: &Option<KeyboardPanel>| p.as_ref().map_or("-".to_string(), |p| p.name());
         let log = Rc::new(RefCell::new(Vec::<String>::new()));
@@ -972,7 +972,7 @@ fn main() {
         theme::reload();
         let mut w2 = AppWindow::new("t", 420, 320);
         w2.end();
-        w2.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        w2.snapshot(run_root().join("unused.png")).ok();
         let row = |k: &str, d: &str| (k.to_string(), d.to_string());
         let sections: Vec<(String, Vec<(String, String)>)> = (0..6).map(|i| (format!("Section {i}"), (0..5).map(|j| row("Ctrl+Shift+F12", &format!("Action {i}.{j}"))).collect())).collect();
         let help = ShortcutHelp::open(&*w2, "Keyboard shortcuts", sections);
@@ -981,13 +981,13 @@ fn main() {
         w2.snapshot(shots.join("help-1-end.png")).map_err(|e| e.to_string())?;
         let (end, max) = (help.scroll(), help.max_scroll());
         for _ in 0..5 { press("Down"); }
-        w2.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        w2.snapshot(run_root().join("unused.png")).ok();
         let after = help.scroll();
         press("Home");
-        w2.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        w2.snapshot(run_root().join("unused.png")).ok();
         check(max > 0 && end == max && after == max && help.scroll() == 0, &format!("End → {end} of {max}, stays at {after}, Home → {}", help.scroll()))?;
         press("Escape");
-        std::fs::remove_file(&user).unwrap();
+        retire(&user);
         theme::reload();
 
         // Operation toast: localized labels, indeterminate, follows the window size.
@@ -1006,7 +1006,7 @@ fn main() {
         op.cancel();
         let mut w3b = w3.clone();
         w3b.resize(w3.x(), w3.y(), 400, 260);
-        w3.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        w3.snapshot(run_root().join("unused.png")).ok();
         w3.snapshot(shots.join("toast-resized.png")).map_err(|e| e.to_string())?;
         let (x, y, w, h) = op.rect();
         check(x + w <= 400 && y + h <= 260 && x > 0 && y > 0, &format!("toast follows the corner: {:?}", op.rect()))?;
@@ -1021,7 +1021,7 @@ fn main() {
         let after = Button::new("After");
         b4.fit(&*after);
         w4.end();
-        w4.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        w4.snapshot(run_root().join("unused.png")).ok();
         let mut a4 = anchor.clone();
         let _ = a4.take_focus();
         let vol = State::new(0.5);
@@ -1100,7 +1100,7 @@ fn main() {
         });
         b2.fit(&*tree);
         w2.end();
-        w2.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        w2.snapshot(run_root().join("unused.png")).ok();
         check(tree.visible_len() == 3 && *calls.borrow() == vec![None], "only roots asked for")?;
         let mut tw = tree.clone();
         let _ = tw.take_focus();
@@ -1150,7 +1150,7 @@ fn main() {
         let tabs = TabBar::new(&["A", "B"], &tab);
         body.fit(&*tabs);
         win.end();
-        win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        win.snapshot(run_root().join("unused.png")).ok();
         let mid = |w: &dyn WidgetExt| (w.x() + w.w() / 2, w.y() + w.h() / 2);
         let (x, y) = mid(&*b); focus::click_at(&*win, x, y); focus::click_at(&*win, x, y);
         let (x, y) = mid(&*sw); focus::click_at(&*win, x, y);
@@ -1390,7 +1390,7 @@ fn main() {
         let state = PathBuf::from(std::env::var("OMARCHY_FLTK_STATE_DIR").unwrap());
         std::fs::create_dir_all(state.join("next-theme")).unwrap();
         std::fs::write(state.join("next-theme/colors.toml"), COLORS_B).unwrap();
-        std::fs::remove_dir_all(state.join("theme")).unwrap();
+        retire(&state.join("theme"));
         std::fs::rename(state.join("next-theme"), state.join("theme")).unwrap();
         pump_until(|| theme::current().palette.accent == theme::Rgb(0x33ccff));
         check(theme::current().palette.accent == theme::Rgb(0x33ccff), "accent after swap")?;
@@ -1428,7 +1428,7 @@ fn main() {
         check(!theme::reload() && matches!(theme::last_error(), Some(theme::ThemeError::BadColor { .. })), "cut color value")?;
         check(accent(0xe68e0d), "still theme A")?;
         // Directory being replaced, then the new theme lands.
-        std::fs::remove_dir_all(state.join("theme")).unwrap();
+        retire(&state.join("theme"));
         check(!theme::reload() && matches!(theme::last_error(), Some(theme::ThemeError::Read { .. })), "missing theme dir")?;
         std::fs::create_dir_all(state.join("next")).unwrap();
         std::fs::write(state.join("next/colors.toml"), COLORS_B).unwrap();
@@ -1441,7 +1441,7 @@ fn main() {
         check(theme::current().font.base == 14, "user override applied")?;
         std::fs::write(&user, "[font\nbase-size = 18\n").unwrap();
         check(!theme::reload() && theme::current().font.base == 14, "malformed override keeps the last theme")?;
-        std::fs::remove_file(&user).unwrap();
+        retire(&user);
         theme::reload();
         check(theme::current().font.base == 12, "override removed")?;
         std::fs::write(&colors_path(&state), COLORS_A).unwrap();
@@ -1489,7 +1489,7 @@ fn main() {
         let mut b = Button::new("Focus");
         body.fit(&*b);
         win.end();
-        win.snapshot(std::env::temp_dir().join("omarchy-fltk-unused.png")).ok();
+        win.snapshot(run_root().join("unused.png")).ok();
         let hits = Rc::new(Cell::new(0));
         let h = hits.clone();
         win.shortcut("Mod+,", move || h.set(h.get() + 1));
@@ -2083,6 +2083,42 @@ fn main() {
         std::process::exit(0);
     }
     std::process::exit(if failed == 0 { 0 } else { 1 });
+}
+
+/// This run's fixture root: a new directory under `build/test-ui/runs`,
+/// created exclusively (never reused) and never deleted, so earlier
+/// captures and anything else on disk stay. Old runs are removed by hand.
+fn run_root() -> &'static Path {
+    static ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    ROOT.get_or_init(|| {
+        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("build/test-ui/runs");
+        std::fs::create_dir_all(&base).unwrap();
+        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        for n in 0.. {
+            let d = base.join(format!("{secs}-{}-{n}", std::process::id()));
+            match std::fs::create_dir(&d) {
+                Ok(()) => return d,
+                Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(e) => panic!("ui fixture root {}: {e}", d.display()),
+            }
+        }
+        unreachable!()
+    })
+}
+
+/// Moves `path` aside (to `<name>.retired-<n>` next to it) instead of
+/// deleting it: fixtures that simulate a removed file or directory never
+/// delete anything. Only paths inside this run's root are accepted.
+fn retire(path: &Path) {
+    assert!(path.starts_with(run_root()), "retire outside the run root: {}", path.display());
+    let name = path.file_name().unwrap().to_string_lossy().into_owned();
+    for n in 0.. {
+        let to = path.with_file_name(format!("{name}.retired-{n}"));
+        if std::fs::symlink_metadata(&to).is_err() {
+            std::fs::rename(path, &to).unwrap();
+            return;
+        }
+    }
 }
 
 fn colors_path(state: &Path) -> PathBuf {

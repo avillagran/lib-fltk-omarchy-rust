@@ -125,18 +125,30 @@ pub fn check(path: &Path) -> Vec<Problem> {
     out
 }
 
+/// A new directory under `base` named `<tag>-<pid>-<n>`: `create_dir` fails
+/// on anything that exists (a symlink too), so a test never writes into a
+/// directory it did not create. Tests never delete trees.
+#[cfg(test)]
+pub(crate) fn fresh_dir(base: PathBuf, tag: &str) -> PathBuf {
+    std::fs::create_dir_all(&base).unwrap();
+    for n in 0.. {
+        let d = base.join(format!("{tag}-{}-{n}", std::process::id()));
+        match std::fs::create_dir(&d) {
+            Ok(()) => return d,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(e) => panic!("{}: {e}", d.display()),
+        }
+    }
+    unreachable!()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     /// A fresh directory under this crate's target/ (never the real data).
     pub(crate) fn temp(tag: &str) -> PathBuf {
-        let d = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("target/test-tmp")
-            .join(format!("{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&d);
-        std::fs::create_dir_all(&d).unwrap();
-        d
+        super::fresh_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/test-tmp"), tag)
     }
 
     #[test]

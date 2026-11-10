@@ -50,6 +50,8 @@ pub mod toml;
 pub mod tooltip;
 pub mod timer;
 pub mod widgets;
+#[cfg(test)]
+pub(crate) mod test_fixture;
 pub mod window;
 
 pub use app::App;

@@ -365,8 +365,7 @@ mod tests {
 
     #[test]
     fn files_are_read_with_a_bound() {
-        let dir = std::env::temp_dir().join(format!("fltk-omarchy-media-{}", std::process::id()));
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = crate::test_fixture::dir("media");
         let f = dir.join("a.png");
         std::fs::write(&f, png(4, 4)).unwrap();
         assert!(read_bounded(&f, 1 << 20).is_ok());
@@ -374,7 +373,6 @@ mod tests {
         assert!(matches!(read_bounded(&dir, 1 << 20), Err(Error::Io(_))), "a directory is not an image");
         assert!(matches!(read_bounded(&dir.join("missing.png"), 1 << 20), Err(Error::Io(_))));
         // Only the file this test wrote is removed (no tree deletion).
-        std::fs::remove_file(&f).unwrap();
-        let _ = std::fs::remove_dir(&dir);
+        crate::test_fixture::tidy(&dir, &["a.png"]);
     }
 }

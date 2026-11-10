@@ -322,10 +322,7 @@ mod tests {
     use super::*;
 
     fn dir(name: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(format!("fltk-omarchy-glass-{}-{name}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&d);
-        std::fs::create_dir_all(&d).unwrap();
-        d
+        crate::test_fixture::dir(&format!("glass-{name}"))
     }
 
     #[test]
@@ -338,7 +335,7 @@ mod tests {
         // Same priority as omarchy-hyprland-window-transparency.
         std::fs::write(d.join("window-opaque.lua"), "").unwrap();
         assert_eq!(mode_in(&d), Mode::Opaque);
-        let _ = std::fs::remove_dir_all(&d);
+        crate::test_fixture::tidy(&d, &["window-glassy.lua", "window-opaque.lua"]);
     }
 
     #[test]
@@ -351,7 +348,7 @@ mod tests {
         assert_eq!(opacity_in(&d), MIN_OPACITY);
         std::fs::write(d.join("alacritty.toml"), "[window]\nopacity = 4\n").unwrap();
         assert_eq!(opacity_in(&d), 1.0);
-        let _ = std::fs::remove_dir_all(&d);
+        crate::test_fixture::tidy(&d, &["alacritty.toml"]);
     }
 
     #[test]

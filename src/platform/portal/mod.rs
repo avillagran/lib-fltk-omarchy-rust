@@ -334,7 +334,7 @@ pub(crate) mod fake {
 
     impl Drop for Fake {
         fn drop(&mut self) {
-            let _ = std::fs::remove_dir_all(&self.dir);
+            crate::test_fixture::tidy(&self.dir, &["bus"]);
         }
     }
 
@@ -392,10 +392,7 @@ pub(crate) mod fake {
     }
 
     pub(crate) fn start(tag: &str, answer: Answer) -> Fake {
-        let dir =
-            std::env::temp_dir().join(format!("fltk-omarchy-portal-{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
+        let dir = crate::test_fixture::dir(&format!("portal-{tag}"));
         let sock = dir.join("bus");
         let listener = UnixListener::bind(&sock).unwrap();
         let (tx, calls) = mpsc::channel();
