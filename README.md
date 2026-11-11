@@ -1,5 +1,10 @@
 # lib-fltk-omarchy
 
+> **Moved to C++.** This Rust version is no longer developed. Its successor
+> is [lib-fltk-omarchy](https://github.com/avillagran/lib-fltk-omarchy), the
+> same toolkit written in C++ directly on FLTK 1.4. This repository stays as
+> the original project and reference.
+
 Omarchy toolkit for [fltk-rs](https://github.com/fltk-rs/fltk-rs): the
 classic Omarchy components (the omarchy-shell `Ui/` kit) ready to use, with
 the live Omarchy theme, Hyprland window modes and small app helpers
