@@ -397,6 +397,7 @@ struct Data {
     attachments: ListModel<String, Attachment>,
     dnd: Cell<bool>,
     laying_out: Cell<bool>,
+    card: Cell<bool>,
     history: RefCell<Option<State<Vec<String>>>>,
     hist: RefCell<PromptHistory>,
     /// True while the composer itself replaces the text (history).
@@ -485,6 +486,7 @@ impl Composer {
             attachments: ListModel::new(|a: &Attachment| a.id.clone()),
             dnd: Cell::new(false),
             laying_out: Cell::new(false),
+            card: Cell::new(false),
             history: RefCell::new(None),
             hist: RefCell::new(PromptHistory::new()),
             setting: Cell::new(false),
@@ -597,6 +599,29 @@ impl Composer {
     }
 
     // ------------------------------------------------------------ builder
+
+    /// Places the editor and bottom actions inside one rounded chat surface.
+    pub fn card(self) -> Self {
+        self.d.card.set(true);
+        self.area.clone().frameless(true);
+        let mut group = self.inner.clone();
+        group.draw(|g| {
+            theme::with(|t| {
+                let fill = t.fill(&t.controls.normal, t.palette.background);
+                paint::fill(g.x(), g.y(), g.w(), g.h(), t.radius.max(12), fill);
+            });
+            g.draw_children();
+        });
+        self.layout();
+        self
+    }
+
+    /// Uses the same submission glyph for the active and empty states.
+    pub fn submit_icon(self, glyph: &str) -> Self {
+        self.send.clone().set_icon(glyph);
+        self.idle.clone().set_icon(glyph);
+        self
+    }
 
     /// The input's placeholder (default "Write a message…", translated).
     pub fn placeholder(self, text: &str) -> Self {
@@ -1073,7 +1098,9 @@ impl Composer {
         if self.d.laying_out.replace(true) {
             return;
         }
-        let (x, y, w) = (self.inner.x(), self.inner.y(), self.inner.w());
+        let card = self.d.card.get();
+        let pad = if card { 12 } else { 0 };
+        let (x, y, w) = (self.inner.x() + pad, self.inner.y() + pad, self.inner.w() - pad * 2);
         let (gap, bh) = theme::with(|t| (t.spacing.control_gap, t.spacing.control_height));
         let mut cy = y;
         let mut bar = self.bar.clone();
@@ -1085,20 +1112,20 @@ impl Composer {
             bar.resize(x, cy, w, h);
             cy += h + gap;
         }
-        let aw = (w - bh - gap).max(40);
+        let aw = (w - if card { 0 } else { bh + gap }).max(40);
         // Right-to-left: the send button goes to the reading end (left).
         let rtl = crate::i18n::is_rtl();
         let (ax, bx) = if rtl {
-            (x + bh + gap, x)
+            (if card { x } else { x + bh + gap }, x)
         } else {
-            (x, x + aw + gap)
+            (x, if card { x + w - bh } else { x + aw + gap })
         };
         let mut area = self.area.clone();
         let h0 = area.h();
         area.resize(ax, cy, aw, h0);
         let ah = area.natural_h();
         area.resize(ax, cy, aw, ah);
-        let by = cy + ah - bh;
+        let by = if card { cy + ah + gap } else { cy + ah - bh };
         self.send.clone().resize(bx, by, bh, bh);
         self.idle.clone().resize(bx, by, bh, bh);
         self.stop.clone().resize(bx, by, bh, bh);
@@ -1107,13 +1134,14 @@ impl Composer {
             if used {
                 tb.show();
                 cy += gap;
-                tb.resize(x, cy, w, bh);
+                tb.resize(if card && rtl { x + bh + gap } else { x }, cy, w - if card { bh + gap } else { 0 }, bh);
                 tb.layout();                cy += bh;
             } else {
                 tb.hide();
             }
         }
-        let total = cy - y;
+        if card { cy = cy.max(by + bh); }
+        let total = cy - y + pad * 2;
         self.d.laying_out.set(false);
         if total != self.inner.h() {
             let mut g = self.inner.clone();

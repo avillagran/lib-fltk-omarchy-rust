@@ -1779,6 +1779,14 @@ impl Default for RichText {
 }
 
 impl RichText {
+    /// Opt into a different wheel response for this view.
+    pub fn scroll_feel(self, feel: crate::scroll::Feel) -> Self {
+        let mut inner = self.inner.borrow_mut();
+        inner.motion = std::mem::take(&mut inner.motion).with_feel(feel);
+        drop(inner);
+        self
+    }
+
     pub fn new() -> RichText {
         let mut widget = Widget::default().with_size(320, 240);
         widget.set_frame(FrameType::NoBox);
@@ -3341,7 +3349,7 @@ fn handle(w: &mut Widget, inn: &Rc<RefCell<Inner>>, hooks: &Hooks, ev: Event) ->
             let mut i = inn.borrow_mut();
             let max = i.max_top();
             let line = i.typo.line_h(i.typo.body) as f64;
-            let delta = app::event_dy_value() as f64 * 3.0 * line;
+            let Some(delta) = crate::scroll::wheel_delta(w, 3.0 * line) else { return false; };
             let top = i.top;
             // At an edge the wheel goes to the scroll area around the view.
             if i.motion.passes(top, delta, max) {

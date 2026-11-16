@@ -1,15 +1,14 @@
 # lib-fltk-omarchy
 
-> **Moved to C++.** This Rust version is no longer developed. Its successor
-> is [lib-fltk-omarchy](https://github.com/avillagran/lib-fltk-omarchy), the
-> same toolkit written in C++ directly on FLTK 1.4. This repository stays as
-> the original project and reference.
+> The C++ successor is [lib-fltk-omarchy](https://github.com/avillagran/lib-fltk-omarchy),
+> written directly on FLTK 1.4. This Rust repository receives focused maintenance
+> for existing applications.
 
 Omarchy toolkit for [fltk-rs](https://github.com/fltk-rs/fltk-rs): the
 classic Omarchy components (the omarchy-shell `Ui/` kit) ready to use, with
 the live Omarchy theme, Hyprland window modes and small app helpers
 (reactive state, cancellable background tasks, virtual lists, offscreen
-snapshots). Import as `fltk_omarchy`. License MIT. Version 0.0.10, not on
+snapshots). Import as `fltk_omarchy`. License MIT. Version 0.0.11, not on
 crates.io (use the git dependency below).
 
 **Multiplatform**: Linux (Wayland and X11), macOS and Windows. The OS

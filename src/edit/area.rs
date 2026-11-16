@@ -79,6 +79,7 @@ pub(crate) struct Inner {
     upstream: bool,
     goal_x: Option<i32>,
     hover: bool,
+    frameless: bool,
     drag: Option<Drag>,
     pub(crate) placeholder: String,
     lines: (usize, usize),
@@ -248,6 +249,7 @@ impl TextArea {
             upstream: false,
             goal_x: None,
             hover: false,
+            frameless: false,
             drag: None,
             placeholder: String::new(),
             lines: (3, 12),
@@ -291,6 +293,13 @@ impl TextArea {
             st.borrow_mut().placeholder = v.clone();
             w.redraw();
         });
+        self
+    }
+
+    /// Removes the field border when the editor is embedded in a shared surface.
+    pub fn frameless(self, on: bool) -> Self {
+        self.st.borrow_mut().frameless = on;
+        self.inner.clone().redraw();
         self
     }
 
@@ -812,7 +821,8 @@ impl TextArea {
                 if !scrollable {
                     return false;
                 }
-                let dy = app::event_dy_value();
+                let Some(delta) = crate::scroll::wheel_delta(&w, (lh * 2) as f64) else { return false; };
+                let dy = delta as i32;
                 {
                     let mut s = self.st.borrow_mut();
                     // At an edge the wheel goes to the scroll area around us.
@@ -820,7 +830,7 @@ impl TextArea {
                     if dy == 0 || (dy < 0 && s.scroll <= 0) || (dy > 0 && s.scroll >= max) {
                         return false;
                     }
-                    s.scroll += dy * lh * 2;
+                    s.scroll += dy;
                     s.clamp_scroll(vh);
                 }
                 w.redraw();
@@ -1301,7 +1311,9 @@ impl TextArea {
         let s = &mut *guard;
         theme::with(|t| {
             let under = t.palette.background;
-            let st = if focused {
+            let st = if s.frameless {
+                &t.controls.normal
+            } else if focused {
                 &t.controls.focus
             } else if s.hover {
                 &t.controls.hover
@@ -1314,9 +1326,9 @@ impl TextArea {
                 y,
                 ww,
                 wh,
-                t.radius,
+                if s.frameless { 0 } else { t.radius },
                 Some(fill),
-                Some((t.border(st, under), st.border_width)),
+                if s.frameless { None } else { Some((t.border(st, under), st.border_width)) },
             );
             let fg = if active {
                 t.palette.foreground

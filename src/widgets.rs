@@ -349,6 +349,12 @@ impl Button {
         self.inner.redraw();
     }
 
+    /// Replaces the leading glyph without changing the action or accessible name.
+    pub fn set_icon(&mut self, glyph: &str) {
+        self.data.borrow_mut().icon = glyph.into();
+        self.inner.redraw();
+    }
+
     pub fn text(&self) -> String {
         self.data.borrow().text.clone()
     }

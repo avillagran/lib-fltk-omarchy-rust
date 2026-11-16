@@ -529,7 +529,7 @@ fn table_handle(w: &mut Widget, ev: Event, st: &Rc<RefCell<TState>>) -> bool {
             let mut s = st.borrow_mut();
             let max = (s.panel.len() as i64 * rh as i64 - (w.h() - header_h()) as i64).max(0);
             let top = s.top;
-            let delta = app::event_dy_value() as f64 * 3.0 * rh as f64;
+            let Some(delta) = crate::scroll::wheel_delta(w, 3.0 * rh as f64) else { return false; };
             // At an edge the wheel goes to the scroll area around us.
             if s.motion.passes(top, delta, max) {
                 return false;
@@ -1176,7 +1176,7 @@ fn tree_handle(w: &mut Widget, ev: Event, st: &Rc<RefCell<TrState>>) -> bool {
             let mut s = st.borrow_mut();
             let max = (s.rows.borrow().len() as i64 * rh as i64 - w.h() as i64).max(0);
             let top = s.top;
-            let delta = app::event_dy_value() as f64 * 3.0 * rh as f64;
+            let Some(delta) = crate::scroll::wheel_delta(w, 3.0 * rh as f64) else { return false; };
             // At an edge the wheel goes to the scroll area around us.
             if s.motion.passes(top, delta, max) {
                 return false;

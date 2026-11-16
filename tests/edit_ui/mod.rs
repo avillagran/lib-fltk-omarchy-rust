@@ -339,6 +339,23 @@ pub fn checks(run: &mut dyn FnMut(&str, Check)) {
             check(!c.shows_stop(), "a draft while busy shows send again")?;
             busy.set(false);
             delete(win);
+            let mut win = AppWindow::new("Card composer", 520, 300);
+            let mut body = win.body();
+            let output = Rc::new(RefCell::new(String::new()));
+            let sink = output.clone();
+            let card = Composer::new().card().submit_icon("\u{f062}")
+                .on_submit(move |text| *sink.borrow_mut() = text);
+            body.fit(&*card);
+            win.end();
+            win.snapshot(shots.join("composer-card.png")).map_err(|e| e.to_string())?;
+            check(card.area().x() > card.x() && card.area().w() < card.w(), "card editor stays inside its surface")?;
+            check(card.send_button().y() >= card.area().y() + card.area().h(), "send action belongs to the bottom row")?;
+            check(card.send_button().y() + card.send_button().h() <= card.y() + card.h(), "card height includes the actions")?;
+            focus::first(&*win);
+            keys("card reply");
+            press("Enter");
+            check(output.borrow().as_str() == "card reply", "card uses the same keyboard submission path")?;
+            delete(win);
             Ok(())
         },
     );

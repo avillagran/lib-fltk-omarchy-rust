@@ -1,17 +1,35 @@
 //! Shared wheel scrolling for pixel-based virtual views and custom canvases.
 //!
-//! Accumulates the full wheel delta and eases toward that exact destination
+//! By default, accumulates the full wheel delta and eases toward that destination
 //! over 120 ms. Reversal discards pending travel in the old direction;
 //! bounds, keyboard navigation and scrollbar jumps cancel stale travel.
 //! Call `position` when drawing and, while `running`, `anim::request_redraw`.
 //! This uses the toolkit's shared animation timer, never a timer per view.
 //!
-//! This is wheel smoothing, not invented touchpad momentum. FLTK 1.5.23
+//! Adaptive motion is opt-in. FLTK 1.5.23
 //! exposes integer deltas without Wayland axis source/stop information. A
 //! backend supplying precise pixels with native momentum should apply those
 //! pixels directly and `jump`, rather than feeding a second inertia model.
 
 use std::time::Instant;
+use fltk::{app, prelude::*};
+
+/// Vertical wheel distance when the pointer is inside the widget and its clips.
+pub fn wheel_delta(widget: &impl WidgetExt, pixels_per_notch: f64) -> Option<f64> {
+    if !app::event_inside_widget(widget) { return None; }
+    let mut parent = widget.parent();
+    while let Some(group) = parent {
+        if !app::event_inside_widget(&group) { return None; }
+        parent = group.parent();
+    }
+    let dy = app::event_dy_value();
+    (dy != 0).then_some(dy as f64 * pixels_per_notch)
+}
+
+/// Wheel response. Native applies deltas immediately; Smooth is the default.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Feel { Native, #[default] Smooth, Adaptive }
+
 
 #[derive(Debug, Clone, Default)]
 pub struct Scroll {
@@ -20,11 +38,21 @@ pub struct Scroll {
     target: f64,
     reported: i64,
     start: Option<Instant>,
+    feel: Feel,
+    last_wheel: Option<Instant>,
+    gain: f64,
+    direction: f64,
 }
 
 impl Scroll {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Select a wheel response; adaptive is opt-in because FLTK cannot identify OS momentum.
+    pub fn with_feel(mut self, feel: Feel) -> Self {
+        self.feel = feel;
+        self
     }
 
     /// Immediately adopts an external position (keyboard, scrollbar, location).
@@ -34,6 +62,9 @@ impl Scroll {
         self.target = self.value;
         self.reported = position.max(0);
         self.start = None;
+        self.last_wheel = None;
+        self.gain = 1.0;
+        self.direction = 0.0;
     }
 
     /// Add a signed pixel distance; preserve magnitude, not only direction.
@@ -84,7 +115,7 @@ impl Scroll {
         self.from = self.from.clamp(0.0, limit);
         self.target = self.target.clamp(0.0, limit);
         if let Some(start) = self.start {
-            let t = now.saturating_duration_since(start).as_secs_f64() / 0.12;
+            let t = now.saturating_duration_since(start).as_secs_f64() / if self.feel == Feel::Adaptive { 0.6 } else { 0.12 };
             if !smooth || t >= 1.0 {
                 self.value = self.target;
                 self.start = None;
@@ -107,7 +138,16 @@ impl Scroll {
         if !delta.is_finite() || delta == 0.0 {
             return self.reported;
         }
+        let smooth = smooth && self.feel != Feel::Native;
         let remaining = self.target - self.value;
+        let delta = if smooth && self.feel == Feel::Adaptive {
+            let same_direction = self.direction * delta > 0.0;
+            let recent = self.last_wheel.is_some_and(|last| now.saturating_duration_since(last).as_millis() <= 100);
+            self.gain = if same_direction && recent { (self.gain.max(1.0) + 0.5).min(3.0) } else { 1.0 };
+            self.last_wheel = Some(now);
+            self.direction = delta.signum();
+            delta * self.gain
+        } else { delta };
         let base = if remaining * delta < 0.0 {
             self.value
         } else {
@@ -115,13 +155,41 @@ impl Scroll {
         };
         self.from = self.value;
         self.target = (base + delta).clamp(0.0, max.max(0) as f64);
-        self.start = Some(now);
+        self.start = (self.target - self.value).abs().ge(&0.01).then_some(now);
         self.position_at(self.reported, max, now, smooth)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn adaptive_coasts_caps_bursts_and_cancels_reversal() {
+        let t = Instant::now();
+        let mut s = Scroll::new().with_feel(Feel::Adaptive);
+        s.wheel_at(0, 100.0, 10000, t, true);
+        let mut p = s.position_at(0, 10000, later(t, 120), true);
+        assert!(p > 0 && p < 100 && s.running());
+        for ms in [130, 140, 150, 160, 170, 180] {
+            p = s.wheel_at(p, 10.0, 10000, later(t, ms), true);
+        }
+        assert_eq!(s.gain, 3.0);
+        p = s.wheel_at(p, -20.0, 10000, later(t, 190), true);
+        assert_eq!(s.gain, 1.0);
+        assert!(s.position_at(p, 10000, later(t, 300), true) < p);
+        let p = s.position_at(s.reported, 10000, later(t, 800), true);
+        assert!(!s.running());
+        assert_eq!(s.wheel_at(p, 100.0, 10000, later(t, 900), false), p + 100);
+        assert!(!s.running());
+        s.jump(10000);
+        assert_eq!(s.wheel_at(10000, 100.0, 10000, later(t, 1000), true), 10000);
+        assert!(!s.running());
+        s.wheel_at(10000, -100.0, 10000, later(t, 1010), true);
+        s.shift(-10);
+        assert!(s.position_at(9990, 9000, later(t, 1020), true) <= 9000);
+        s.jump(7);
+        assert!(!s.running());
+    }
+
     #[test]
     fn passes_at_the_edges() {
         let s = super::Scroll::new();

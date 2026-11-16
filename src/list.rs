@@ -461,7 +461,8 @@ impl List {
                 Event::MouseWheel => {
                     let mut i = inn.borrow_mut();
                     let max = (i.count as i64 * i.row_h as i64 - w.h() as i64).max(0);
-                    let (top, delta) = (i.top, app::event_dy_value() as f64 * 3.0 * i.row_h as f64);
+                    let Some(delta) = crate::scroll::wheel_delta(w, 3.0 * i.row_h as f64) else { return false; };
+                    let top = i.top;
                     // At an edge the wheel goes to the scroll area around us.
                     if i.motion.passes(top, delta, max) { return false; }
                     i.top = i.motion.wheel(top, delta, max);

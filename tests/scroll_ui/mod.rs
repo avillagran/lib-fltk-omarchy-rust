@@ -21,6 +21,48 @@ fn grab(win: &mut fltk::window::DoubleWindow) -> Result<Vec<u8>, String> {
 }
 
 pub fn checks(run: &mut dyn FnMut(&str, Check)) {
+    run("wheel ownership: focused sibling cannot steal at edges", &|_| {
+        use fltk_omarchy::{focus, layout::{self, FlexExt}, list::{List, ListRow}, State};
+        let mut win = AppWindow::new("Wheel ownership", 600, 400);
+        let mut row = layout::row();
+        let mut list = List::new(&State::new(100usize), |i| ListRow::new(&format!("Row {i}")));
+        let text = RichText::new();
+        row.fit(&*list);
+        row.fit(&*text);
+        row.close_fitted();
+        win.end();
+        for i in 0..100 { text.append_markdown(&format!("Paragraph {i} words")); }
+        win.show();
+        settle();
+        list.set_scroll_offset(500);
+        list.take_focus().map_err(|e| e.to_string())?;
+        text.scroll_to(0);
+        settle();
+        let before = list.scroll_offset();
+        focus::wheel_at(&*win, text.x() + 10, text.y() + 10, -1);
+        settle();
+        check(list.scroll_offset() == before, "focused list stole wheel at text top")?;
+        text.scroll_to_bottom();
+        settle();
+        focus::wheel_at(&*win, text.x() + 10, text.y() + 10, 1);
+        settle();
+        check(list.scroll_offset() == before, "focused list stole wheel at text bottom")?;
+        text.scroll_to(500);
+        text.clone().take_focus().map_err(|e| e.to_string())?;
+        list.set_scroll_offset(0);
+        let before = text.scroll_offset();
+        focus::wheel_at(&*win, list.x() + 10, list.y() + 10, -1);
+        settle();
+        check(text.scroll_offset() == before, "focused text stole wheel at list top")?;
+        list.set_scroll_offset(i64::MAX);
+        settle();
+        focus::wheel_at(&*win, list.x() + 10, list.y() + 10, 1);
+        settle();
+        check(text.scroll_offset() == before, "focused text stole wheel at list bottom")?;
+        fltk::window::DoubleWindow::delete((*win).clone());
+        Ok(())
+    });
+
     run("scroll blit: moved pixels + exposed strip == full repaint (down and up)", &|_| {
         let mut win = AppWindow::new("Blit", 520, 400);
         let rt = RichText::new();

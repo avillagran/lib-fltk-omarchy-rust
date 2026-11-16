@@ -72,7 +72,7 @@ and o3 (`ui/qml`). They are in `anim::ms`.
 | A row leaving | 300 ms InCubic: fades out, drifts 22 px, and collapses (its height closes with the rows below, OutCubic) in List, Tree, Sidebar and NavTree | o3 `T3ThreadRow.qml` `depart` |
 | **Tree** branch opening / closing: rows below slide | 200 ms (`ms::REVEAL`) | Omarchy `Ui/KeyboardPanel.qml` `drawnHeight` |
 | **RichText**: a new message (`append_markdown`, `append_blocks`) fades in | 360 ms OutCubic; streaming into it (`push_markdown`) costs nothing | o3 row arrival |
-| Wheel scrolling | 120 ms to the exact destination (unchanged, `scroll`) | — |
+| Wheel scrolling | 120 ms to the exact destination by default; `RichText::scroll_feel(Feel::Adaptive)` opts into cadence-based gain and a 600 ms coast | — |
 
 ## Layout motion
 
@@ -249,3 +249,5 @@ motion no frame is pending (`anim::pending() == 0`): the timer stops.
   from 97 % to full size and the content inside stays at its final size
   (FLTK has no transforms). A layer showing several cards at once (a menu
   with an open submenu) fades without the grow.
+
+`scroll::Feel::Native` applies wheel deltas immediately. Adaptive wheel motion is opt-in: FLTK exposes integer notches without axis source or phase, so it cannot distinguish operating-system momentum. Reduced motion applies deltas immediately in every mode.
