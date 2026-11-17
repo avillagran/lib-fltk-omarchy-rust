@@ -70,6 +70,7 @@ pub fn checks(run: &mut dyn FnMut(&str, Check)) {
     run("list: the wheel goes to the scroll area around it at the list's edges", &|_| {
         let count = State::new(20usize);
         let mut win = AppWindow::new("Nested", 360, 300);
+        win.set_pos(87, 63);
         let mut body = win.body();
         let mut outer = fltk::group::Scroll::default();
         outer.set_type(fltk::group::ScrollType::Vertical);
@@ -113,6 +114,7 @@ pub fn checks(run: &mut dyn FnMut(&str, Check)) {
     run("rich text: the wheel goes to the scroll area around it at its end", &|_| {
         use fltk_omarchy::text::RichText;
         let mut win = AppWindow::new("Nested text", 360, 300);
+        win.set_pos(87, 63);
         let mut body = win.body();
         let mut outer = fltk::group::Scroll::default();
         outer.set_type(fltk::group::ScrollType::Vertical);

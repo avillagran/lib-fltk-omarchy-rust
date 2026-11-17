@@ -19,6 +19,8 @@ pub fn wheel_delta(widget: &impl WidgetExt, pixels_per_notch: f64) -> Option<f64
     if !app::event_inside_widget(widget) { return None; }
     let mut parent = widget.parent();
     while let Some(group) = parent {
+        // Events use window-local coordinates; a native window's x/y are screen coordinates.
+        if group.as_window().is_some() { break; }
         if !app::event_inside_widget(&group) { return None; }
         parent = group.parent();
     }

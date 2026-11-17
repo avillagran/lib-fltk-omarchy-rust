@@ -8,7 +8,7 @@ Omarchy toolkit for [fltk-rs](https://github.com/fltk-rs/fltk-rs): the
 classic Omarchy components (the omarchy-shell `Ui/` kit) ready to use, with
 the live Omarchy theme, Hyprland window modes and small app helpers
 (reactive state, cancellable background tasks, virtual lists, offscreen
-snapshots). Import as `fltk_omarchy`. License MIT. Version 0.0.11, not on
+snapshots). Import as `fltk_omarchy`. License MIT. Version 0.0.12, not on
 crates.io (use the git dependency below).
 
 **Multiplatform**: Linux (Wayland and X11), macOS and Windows. The OS
